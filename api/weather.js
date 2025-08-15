@@ -9,7 +9,7 @@ export default async function handler(request, response) {
   const HOME_ASSISTANT_TOKEN = process.env.HOME_ASSISTANT_TOKEN;
 
   // Define the entity IDs for your weather sensors in Home Assistant.
-  // You may need to adjust these if they are named differently in your setup.
+  // We've replaced the deprecated WeatherFlow (TWC) with OpenWeatherMap.
   const ENTITIES = {
     nws: {
       temp: 'sensor.nws_temperature',
@@ -19,9 +19,9 @@ export default async function handler(request, response) {
       temp: 'sensor.accuweather_temperature',
       precip: 'sensor.accuweather_precipitation_probability',
     },
-    twc: { // From WeatherFlow integration
-      temp: 'sensor.weatherflow_temperature',
-      precip: 'sensor.weatherflow_precipitation_probability',
+    openweathermap: { // <-- UPDATED SECTION
+      temp: 'sensor.openweathermap_temperature',
+      precip: 'sensor.openweathermap_precipitation_probability',
     }
   };
   // --- END CONFIGURATION ---
@@ -55,19 +55,19 @@ export default async function handler(request, response) {
   const [
     nwsTemp, nwsPrecip,
     accuweatherTemp, accuweatherPrecip,
-    twcTemp, twcPrecip
+    owmTemp, owmPrecip // <-- UPDATED
   ] = await Promise.all([
     getEntityState(ENTITIES.nws.temp),
     getEntityState(ENTITIES.nws.precip),
     getEntityState(ENTITIES.accuweather.temp),
     getEntityState(ENTITIES.accuweather.precip),
-    getEntityState(ENTITIES.twc.temp),
-    getEntityState(ENTITIES.twc.precip),
+    getEntityState(ENTITIES.openweathermap.temp), // <-- UPDATED
+    getEntityState(ENTITIES.openweathermap.precip), // <-- UPDATED
   ]);
 
   // --- DATA BLENDING LOGIC ---
-  const temperatures = [nwsTemp, accuweatherTemp, twcTemp].filter(t => t !== null && !isNaN(t));
-  const precipitations = [nwsPrecip, accuweatherPrecip, twcPrecip].filter(p => p !== null && !isNaN(p));
+  const temperatures = [nwsTemp, accuweatherTemp, owmTemp].filter(t => t !== null && !isNaN(t)); // <-- UPDATED
+  const precipitations = [nwsPrecip, accuweatherPrecip, owmPrecip].filter(p => p !== null && !isNaN(p)); // <-- UPDATED
 
   const averageTemp = temperatures.length > 0
     ? temperatures.reduce((a, b) => a + b, 0) / temperatures.length
@@ -86,7 +86,7 @@ export default async function handler(request, response) {
     sources: {
       nws: { temp: nwsTemp, precip: nwsPrecip },
       accuweather: { temp: accuweatherTemp, precip: accuweatherPrecip },
-      twc: { temp: twcTemp, precip: twcPrecip },
+      openweathermap: { temp: owmTemp, precip: owmPrecip }, // <-- UPDATED
     },
     last_updated: new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }),
   };
